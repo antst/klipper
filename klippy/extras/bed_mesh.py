@@ -474,8 +474,6 @@ class BedMeshCalibrate:
         x_offset = offsets[0]
         y_offset = offsets[1]
         z_offset = offsets[2]
-        self.gcode.respond_info \
-                ("offsets: %f %f %f" % (x_offset,y_offset,z_offset) );
 
         params=self.bedmesh.z_mesh.probe_params
 
