@@ -213,6 +213,9 @@ class BedMeshCalibrate:
             'BED_MESH_TILT', self.cmd_BED_MESH_TILT,
             desc=self.cmd_BED_MESH_TILT_help)
         self.gcode.register_command(
+            'BED_MESH_TILT_RESET', self.cmd_BED_MESH_TILT_RESET,
+            desc=self.cmd_BED_MESH_TILT_RESET_help)
+        self.gcode.register_command(
             'BED_MESH_MAP', self.cmd_BED_MESH_MAP,
             desc=self.cmd_BED_MESH_MAP_help)
         self.gcode.register_command(
@@ -417,13 +420,16 @@ class BedMeshCalibrate:
     def cmd_BED_MESH_MAP(self, params):
         self.build_map = True
         self.start_calibration(params)
-    cmd_BED_MESH_CALIBRATE_help = "Perform Mesh Bed Leveling"
+    cmd_BED_MESH_CALIBRATE_help = "Perform Bed Mesh Leveling"
     def cmd_BED_MESH_CALIBRATE(self, params):
         self.build_map = False
         self.start_calibration(params)
     cmd_BED_MESH_TILT_help = "Perform Tilting of existing Mesh"
+    cmd_BED_MESH_TILT_RESET_help = "Reset Tilting of existing Mesh"
     def cmd_BED_MESH_TILT(self, params):
         self.start_tilting(params)
+    def cmd_BED_MESH_TILT_RESET(self, params):
+        self.tilting_reset(params)
     def start_calibration(self, params):
         self.bedmesh.set_mesh(None)
         self.probed_z_table_backup=None
@@ -433,6 +439,12 @@ class BedMeshCalibrate:
             self.gcode.respond_info("No mesh! Nothing to tilt!");
         else:
             self.tilt_probe_helper.start_probe(params)
+    def tilting_reset(self, params):
+        if (self.bedmesh.z_mesh.mesh_z_table is None ) or \
+                       (self.probed_z_table_backup is None):
+            self.gcode.respond_info("No tilted mesh detected, nothing to reset!");
+        else:
+            self.reset_tilt()
 
     def print_probed_positions(self, print_func):
         if self.probed_z_table is not None:
@@ -444,6 +456,18 @@ class BedMeshCalibrate:
             print_func(msg)
         else:
             print_func("bed_mesh: bed has not been probed")
+
+    def reset_tilt(self)
+        self.probed_z_table=copy.deepcopy(self.probed_z_table_backup)
+        mesh = ZMesh(self.bedmesh.z_mesh.probe_params)
+        try:
+            mesh.build_mesh(probed_z_table)
+        except BedMeshError as e:
+            raise self.gcode.error(e.message)
+        self.bedmesh.set_mesh(mesh)
+        self.probed_z_table_backup=None
+        self.gcode.respond_info("Bed Mesh Tilting has been reset")
+        self.save_profile("default")
 
 
     def tilt_probe_finalize(self, offsets, positions):
@@ -514,7 +538,7 @@ class BedMeshCalibrate:
 
         self.probed_z_table=t_probed_z_table
 
-        self.gcode.respond_info("Mesh Bed Tilting Complete")
+        self.gcode.respond_info("Bed Mesh Tilting Complete")
         self.save_profile("default")
 
 
@@ -597,7 +621,7 @@ class BedMeshCalibrate:
             except BedMeshError as e:
                 raise self.gcode.error(e.message)
             self.bedmesh.set_mesh(mesh)
-            self.gcode.respond_info("Mesh Bed Leveling Complete")
+            self.gcode.respond_info("Bed Mesh Leveling Complete")
             self.save_profile("default")
 
 
